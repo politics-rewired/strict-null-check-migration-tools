@@ -1,4 +1,4 @@
-import { getImportsForFile } from "./tsHelper";
+import { getImportsForFile, PathAliasMap } from "./tsHelper";
 
 // Uses Kosaraju's algorithm to find strongly-connected components
 // in the codebase's dependency graph. See the wikipedia article
@@ -6,7 +6,11 @@ import { getImportsForFile } from "./tsHelper";
 // https://en.wikipedia.org/wiki/Kosaraju%27s_algorithm
 //
 // Return a list of (list of files in a cycle, which may be just one file).
-export function findCycles(srcRoot: string, files: string[]): string[][] {
+export function findCycles(
+  srcRoot: string,
+  files: string[],
+  pathAliases: PathAliasMap
+): string[][] {
   const imports = new Map<string, Array<string>>();
   const importers = new Map<string, Set<string>>();
 
@@ -15,7 +19,7 @@ export function findCycles(srcRoot: string, files: string[]): string[][] {
   // Step 1: do a post-order traversal of the dependency tree
   const visit = (file: string) => {
     if (!imports.has(file)) {
-      const importList = getImportsForFile(file, srcRoot);
+      const importList = getImportsForFile(file, srcRoot, pathAliases);
       imports.set(file, importList);
 
       // Recursively traverse imports

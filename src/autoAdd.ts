@@ -5,9 +5,12 @@ import {
   getCheckedFiles,
 } from "./getStrictNullCheckEligibleFiles";
 import { ErrorCounter } from "./errorCounter";
+import { ImportTracker, parsePathAliases } from "./tsHelper";
 
 const tsconfigPath = process.argv[2];
-const srcRoot = path.dirname(tsconfigPath);
+const srcRoot = path.resolve(process.cwd(), path.dirname(tsconfigPath));
+
+console.log("src root:", srcRoot);
 
 tryAutoAddStrictNulls();
 
@@ -17,15 +20,22 @@ async function tryAutoAddStrictNulls() {
 
   const errorCounter = new ErrorCounter(tsconfigPath);
 
+  const pathAliases = parsePathAliases(tsconfigPath);
+
   // As long as auto-add adds a file, it's possible there's a new file that
   // depends on one of the newly-added files that can now be strict null checked
   while (hasAddedFile) {
     hasAddedFile = false;
 
+    const importTracker = new ImportTracker(srcRoot, pathAliases);
+
     const eligibleFiles = await listStrictNullCheckEligibleFiles(
       srcRoot,
-      checkedFiles
+      checkedFiles,
+      importTracker
     );
+
+    console.log("eligible files:", eligibleFiles);
 
     errorCounter.start();
     for (let i = 0; i < eligibleFiles.length; i++) {

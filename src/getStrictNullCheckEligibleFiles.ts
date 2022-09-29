@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as glob from "glob";
-import { ImportTracker } from "./tsHelper";
+import { ImportTracker, TSConfig } from "./tsHelper";
 import { findCycles } from "./findCycles";
 
 function considerFile(file: string): boolean {
@@ -43,16 +43,15 @@ export function forEachFileInSrc(srcRoot: string): Promise<string[]> {
  */
 export async function listStrictNullCheckEligibleFiles(
   srcRoot: string,
-  checkedFiles: Set<string>
+  checkedFiles: Set<string>,
+  importTracker: ImportTracker
 ): Promise<string[]> {
-  const importsTracker = new ImportTracker(srcRoot);
-
   const files = await forEachFileInSrc(srcRoot);
   return files.filter((file) => {
     if (checkedFiles.has(file)) {
       return false;
     }
-    return !hasUncheckedImport(file, importsTracker, checkedFiles);
+    return !hasUncheckedImport(file, importTracker, checkedFiles);
   });
 }
 
@@ -62,12 +61,11 @@ export async function listStrictNullCheckEligibleFiles(
  */
 export async function listStrictNullCheckEligibleCycles(
   srcRoot: string,
-  checkedFiles: Set<string>
+  checkedFiles: Set<string>,
+  importsTracker: ImportTracker
 ): Promise<string[][]> {
-  const importsTracker = new ImportTracker(srcRoot);
-
   const files = await forEachFileInSrc(srcRoot);
-  const cycles = findCycles(srcRoot, files);
+  const cycles = findCycles(srcRoot, files, importsTracker.pathAliases);
   return cycles.filter((filesInCycle) => {
     // A single file is not a cycle
     if (filesInCycle.length <= 1) {
@@ -96,12 +94,6 @@ export async function listStrictNullCheckEligibleCycles(
     }
     return true;
   });
-}
-
-interface TSConfig {
-  files: string[];
-  include: string[];
-  exclude: string[];
 }
 
 /**

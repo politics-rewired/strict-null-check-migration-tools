@@ -6,7 +6,7 @@ import {
   forEachFileInSrc,
   listStrictNullCheckEligibleCycles,
 } from "./getStrictNullCheckEligibleFiles";
-import { ImportTracker } from "./tsHelper";
+import { ImportTracker, parsePathAliases } from "./tsHelper";
 import { findCycles } from "./findCycles";
 import { ErrorCounter } from "./errorCounter";
 
@@ -41,14 +41,22 @@ export interface DependencyNode {
 async function summary() {
   const allFiles = await forEachFileInSrc(srcRoot);
   const checkedFiles = await getCheckedFiles(tsconfigPath, srcRoot);
+  const pathAliases = parsePathAliases(tsconfigPath);
+  const importTracker = new ImportTracker(srcRoot, pathAliases);
   const eligibleFiles = new Set([
-    ...(await listStrictNullCheckEligibleFiles(srcRoot, checkedFiles)),
-    ...(await listStrictNullCheckEligibleCycles(srcRoot, checkedFiles)).reduce(
-      (a, b) => a.concat(b),
-      []
-    ),
+    ...(await listStrictNullCheckEligibleFiles(
+      srcRoot,
+      checkedFiles,
+      importTracker
+    )),
+    ...(
+      await listStrictNullCheckEligibleCycles(
+        srcRoot,
+        checkedFiles,
+        importTracker
+      )
+    ).reduce((a, b) => a.concat(b), []),
   ]);
-  const importTracker = new ImportTracker(srcRoot);
 
   let errorCounter = new ErrorCounter(tsconfigPath);
   if (countErrors) {
@@ -60,7 +68,7 @@ async function summary() {
   );
   console.log(`Current eligible file count: ${eligibleFiles.size}`);
 
-  const cycles = findCycles(srcRoot, allFiles);
+  const cycles = findCycles(srcRoot, allFiles, pathAliases);
   let nodes: DependencyNode[] = [];
   for (let i = 0; i < cycles.length; i++) {
     let files = cycles[i];

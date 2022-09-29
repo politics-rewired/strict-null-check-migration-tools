@@ -5,7 +5,7 @@ import {
   getCheckedFiles,
   listStrictNullCheckEligibleCycles,
 } from "./getStrictNullCheckEligibleFiles";
-import { getImportsForFile } from "./tsHelper";
+import { getImportsForFile, ImportTracker, parsePathAliases } from "./tsHelper";
 
 const tsconfigPath = process.argv[2];
 console.log(tsconfigPath);
@@ -17,13 +17,17 @@ findCandidates();
 
 async function findCandidates() {
   const checkedFiles = await getCheckedFiles(tsconfigPath, srcRoot);
+  const pathAliases = parsePathAliases(tsconfigPath);
+  const importTracker = new ImportTracker(srcRoot, pathAliases);
   const eligibleFiles = await listStrictNullCheckEligibleFiles(
     srcRoot,
-    checkedFiles
+    checkedFiles,
+    importTracker
   );
   const eligibleCycles = await listStrictNullCheckEligibleCycles(
     srcRoot,
-    checkedFiles
+    checkedFiles,
+    importTracker
   );
 
   if (eligibleCycles.length > 0) {
@@ -40,7 +44,7 @@ async function findCandidates() {
 
   const fileToImports = new Map<string, string[]>();
   for (const file of await forEachFileInSrc(srcRoot)) {
-    fileToImports.set(file, getImportsForFile(file, srcRoot));
+    fileToImports.set(file, getImportsForFile(file, srcRoot, pathAliases));
   }
 
   const fileToImportsSecondOrder = oneLevelDownImports(fileToImports);

@@ -13,7 +13,7 @@ export class ErrorCounter {
 
   public start(): void {
     this.tsconfigCopyPath =
-      this.tsconfigPath + `copy${Math.floor(Math.random() * (1 << 16))}.json`;
+      this.tsconfigPath + `copy${new Date().valueOf()}.json`;
 
     // Make a copy of tsconfig because we're going to keep modifying it.
     execSync(`cp ${this.tsconfigPath} ${this.tsconfigCopyPath}`);
@@ -40,6 +40,9 @@ export class ErrorCounter {
     return new Promise<number>((resolve) => {
       const listener = (data: any) => {
         const textOut = data.toString();
+
+        console.log("checker output:", textOut);
+
         const match = buildCompletePattern.exec(textOut);
 
         if (match) {

@@ -1,6 +1,7 @@
 import * as path from "path";
 import { forEachFileInSrc } from "./getStrictNullCheckEligibleFiles";
 import { findCycles } from "./findCycles";
+import { parsePathAliases } from "./tsHelper";
 
 const tsconfigPath = process.argv[2];
 const srcRoot = path.dirname(tsconfigPath);
@@ -9,7 +10,8 @@ runFindCycles();
 
 async function runFindCycles() {
   let files = await forEachFileInSrc(srcRoot);
-  let cycles = findCycles(srcRoot, files);
+  const pathAliases = parsePathAliases(tsconfigPath);
+  let cycles = findCycles(srcRoot, files, pathAliases);
 
   const singleFiles = [];
   let stronglyConnectedComponentCount = 0;
